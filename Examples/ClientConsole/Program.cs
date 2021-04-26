@@ -23,24 +23,46 @@ namespace BinanceAPI.ClientConsole
             StreamWriter writer = new StreamWriter($"{logDebug}\\log-debug-{DateTime.Now.ToString("yyyyMMddHH")}.txt", true);
             BinanceClient.SetDefaultOptions(new BinanceClientOptions()
             {
-                ApiCredentials = new ApiCredentials("APIKEY", "APISECRET"),
+                ApiCredentials = new ApiCredentials("dlgSlybqJTZ2zCTjf2sT97mWbcTRJbuYa5GtDPue6x3JJsulVt1gmZ3oGttfkQzJ", "Q6fjmKXHMHpVQqYXIrU9fdMVayRTAYcYGVE0x35W9Im3cRhjkIEl3oWYYpkBkaNp"),
                 LogVerbosity = LogVerbosity.Debug,
                 LogWriters = new List<TextWriter> { writer, Console.Out }
             });
             BinanceSocketClient.SetDefaultOptions(new BinanceSocketClientOptions()
             {
-                ApiCredentials = new ApiCredentials("APIKEY", "APISECRET"),
+                ApiCredentials = new ApiCredentials("dlgSlybqJTZ2zCTjf2sT97mWbcTRJbuYa5GtDPue6x3JJsulVt1gmZ3oGttfkQzJ", "Q6fjmKXHMHpVQqYXIrU9fdMVayRTAYcYGVE0x35W9Im3cRhjkIEl3oWYYpkBkaNp"),
                 LogVerbosity = LogVerbosity.Debug,
                 LogWriters = new List<TextWriter> { writer, Console.Out }
             });
 
 
             BinanceClient client = new BinanceClient();
-            LogHelper.WriteLogTrade(client.General.GetAccountInfo());
+            var startResult = client.Spot.UserStream.StartUserStream();
 
+            if (!startResult.Success)
+                throw new Exception($"Failed to start user stream: {startResult.Error}");
+
+            var socketClient = new BinanceSocketClient();
+
+            socketClient.Spot.SubscribeToUserDataUpdates(startResult.Data,
+                orderUpdate =>
+                {
+                    // Handle order update
+                    LogHelper.WriteLogOderUpdate(orderUpdate);
+                },
+                ocoUpdate =>
+                { 
+                    // Handle oco order update
+                },
+                positionUpdate =>
+                { 
+                    // Handle account position update
+                },
+                balanceUpdate =>
+                { 
+                    // Handle balance update
+                });
 
             //// Spot.Market | Spot market info endpoints
-            client.Spot.Market.GetBookPrice("BTCUSDT");
             //// Spot.Order | Spot order info endpoints
             //client.Spot.Order.GetAllOrders("BTCUSDT");
             //// Spot.System | Spot system endpoints
@@ -106,31 +128,7 @@ namespace BinanceAPI.ClientConsole
             //client.WithdrawDeposit.GetWithdrawalHistory();
 
 
-
-            //var socketClient = new BinanceSocketClient();
-            //// Spot | Spot market and user subscription methods
-            //socketClient.Spot.SubscribeToAllBookTickerUpdates(data =>
-            //{
-            //    // Handle data
-            //});
-
-            //// FuturesCoin | Coin-M futures market and user subscription methods
-            //socketClient.FuturesCoin.SubscribeToAllBookTickerUpdates(data =>
-            //{
-            //    // Handle data
-            //});
-
-            //// FuturesUsdt | USDT-M futures market and user subscription methods
-            //socketClient.FuturesUsdt.SubscribeToAllBookTickerUpdates(data =>
-            //{
-            //    // Handle data
-            //});
-
-            //// Unsubscribe
-            //socketClient.UnsubscribeAll();
-
             Console.ReadLine();
-            
             writer.Close();
         }
     }
