@@ -20,7 +20,7 @@ namespace BinanceAPI.ClientConsole
             string logTrade = Path.Combine(rootPath, $@"log-trade");
             DirectoryInfo diTrade = Directory.CreateDirectory(logTrade);
 
-            StreamWriter writer = new StreamWriter($"{logDebug}\\log-debug-{DateTime.Now.ToString("yyyyMMddHH")}.txt", true);
+            StreamWriter writer = new StreamWriter($"{logDebug}\\log-debug-{DateTime.Now.ToString("yyyyMMddHHmm")}.txt", true);
             BinanceClient.SetDefaultOptions(new BinanceClientOptions()
             {
                 ApiCredentials = new ApiCredentials("dlgSlybqJTZ2zCTjf2sT97mWbcTRJbuYa5GtDPue6x3JJsulVt1gmZ3oGttfkQzJ", "Q6fjmKXHMHpVQqYXIrU9fdMVayRTAYcYGVE0x35W9Im3cRhjkIEl3oWYYpkBkaNp"),
@@ -37,9 +37,12 @@ namespace BinanceAPI.ClientConsole
 
             BinanceClient client = new BinanceClient();
             var startResult = client.Spot.UserStream.StartUserStream();
+            var accountSnapshot = client.General.GetDailySpotAccountSnapshot(DateTime.Now.AddDays(-3), DateTime.Now);
+            LogHelper.WriteFreeLog(accountSnapshot.Data);
 
             if (!startResult.Success)
                 throw new Exception($"Failed to start user stream: {startResult.Error}");
+
 
             var socketClient = new BinanceSocketClient();
 
