@@ -1,18 +1,69 @@
 ﻿using Binance.Net;
+using Binance.Net.Enums;
 using Binance.Net.Objects.Spot;
 using BinanceAPI.ClientConsole.Helper;
 //using BinanceAPI.ClientConsole.Helper;
 using CryptoExchange.Net.Authentication;
 using CryptoExchange.Net.Logging;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 
 namespace BinanceAPI.ClientConsole
 {
     class Program
     {
+        private static StreamWriter _writer;
+        private static BinanceClient _client;
+        private static BinanceSocketClient _socketClient;
+
         static void Main(string[] args)
+        {
+            SettingConfig();
+
+
+
+            var tradeCostAveraging = TradeCostAveraging(symbol: "SOLBTC", limit: 500);
+            LogHelper.WriteFreeLog(tradeCostAveraging);
+
+            Console.ReadLine();
+            _writer.Close();
+        }
+
+        private static object TradeCostAveraging(string symbol, DateTime? startTime = null, DateTime? endTime = null, int? limit = 500)
+        {
+            var trades = _client.Spot.Order.GetAllOrders(symbol: symbol, limit: limit);
+            if (trades.Success)
+            {
+                var tradesFilled = trades.Data.Where(c => c.Status == OrderStatus.Filled);
+                decimal averaging = tradesFilled.Average(a => a.AverageFillPrice).Value;
+                decimal totalQuantityFilled = 0;
+                decimal totalCost = 0;
+                foreach (var item in tradesFilled)
+                {
+                    if (item.Status == OrderStatus.Filled)
+                    {
+                        totalQuantityFilled += item.QuantityFilled;
+                        totalCost += item.QuoteQuantityFilled;
+                    }
+                }
+                averaging = totalCost / totalQuantityFilled;
+                string result = $"You have {tradesFilled.Count()} trades ${symbol} filled."
+                    +$"- Total buy: ${totalQuantityFilled}, total cost: ${totalCost}"
+                    +$"------ DETAILS ------";
+                return new 
+                {
+                    Summary = result,
+                    Detail = trades.Data
+                };
+            }
+            return null;
+        }
+
+
+        private static void SettingConfig()
         {
             string rootPath = $@"{Directory.GetParent(Directory.GetCurrentDirectory()).Parent.Parent.FullName}\\log";
             string logDebug = Path.Combine(rootPath, $@"log-debug");
@@ -20,48 +71,47 @@ namespace BinanceAPI.ClientConsole
             string logTrade = Path.Combine(rootPath, $@"log-trade");
             DirectoryInfo diTrade = Directory.CreateDirectory(logTrade);
 
-            StreamWriter writer = new StreamWriter($"{logDebug}\\log-debug-{DateTime.Now.ToString("yyyyMMddHHmm")}.txt", true);
+            _writer = new StreamWriter($"{logDebug}\\log-debug-{DateTime.Now.ToString("yyyyMMddHHmm")}.txt", true);
             BinanceClient.SetDefaultOptions(new BinanceClientOptions()
             {
                 ApiCredentials = new ApiCredentials("dlgSlybqJTZ2zCTjf2sT97mWbcTRJbuYa5GtDPue6x3JJsulVt1gmZ3oGttfkQzJ", "Q6fjmKXHMHpVQqYXIrU9fdMVayRTAYcYGVE0x35W9Im3cRhjkIEl3oWYYpkBkaNp"),
                 LogVerbosity = LogVerbosity.Debug,
-                LogWriters = new List<TextWriter> { writer, Console.Out }
+                LogWriters = new List<TextWriter> { _writer, Console.Out }
             });
             BinanceSocketClient.SetDefaultOptions(new BinanceSocketClientOptions()
             {
                 ApiCredentials = new ApiCredentials("dlgSlybqJTZ2zCTjf2sT97mWbcTRJbuYa5GtDPue6x3JJsulVt1gmZ3oGttfkQzJ", "Q6fjmKXHMHpVQqYXIrU9fdMVayRTAYcYGVE0x35W9Im3cRhjkIEl3oWYYpkBkaNp"),
                 LogVerbosity = LogVerbosity.Debug,
-                LogWriters = new List<TextWriter> { writer, Console.Out }
+                LogWriters = new List<TextWriter> { _writer, Console.Out }
             });
 
 
-            BinanceClient client = new BinanceClient();
-            var startResult = client.Spot.UserStream.StartUserStream();
-            var accountSnapshot = client.General.GetDailySpotAccountSnapshot(DateTime.Now.AddDays(-3), DateTime.Now);
-            LogHelper.WriteFreeLog(accountSnapshot.Data);
+            _client = new BinanceClient();
+            var startResult = _client.Spot.UserStream.StartUserStream();
+            //var accountSnapshot = client.General.GetDailySpotAccountSnapshot(DateTime.Now.AddDays(-3), DateTime.Now);
+            //LogHelper.WriteFreeLog(accountSnapshot.Data);
 
             if (!startResult.Success)
                 throw new Exception($"Failed to start user stream: {startResult.Error}");
 
+            _socketClient = new BinanceSocketClient();
 
-            var socketClient = new BinanceSocketClient();
-
-            socketClient.Spot.SubscribeToUserDataUpdates(startResult.Data,
+            _socketClient.Spot.SubscribeToUserDataUpdates(startResult.Data,
                 orderUpdate =>
                 {
                     // Handle order update
                     LogHelper.WriteLogOderUpdate(orderUpdate);
                 },
                 ocoUpdate =>
-                { 
+                {
                     // Handle oco order update
                 },
                 positionUpdate =>
-                { 
+                {
                     // Handle account position update
                 },
                 balanceUpdate =>
-                { 
+                {
                     // Handle balance update
                 });
 
@@ -130,9 +180,7 @@ namespace BinanceAPI.ClientConsole
             //// WithdrawDeposit | Withdraw and deposit endpoints
             //client.WithdrawDeposit.GetWithdrawalHistory();
 
-
-            Console.ReadLine();
-            writer.Close();
         }
+
     }
 }
