@@ -13500,9 +13500,19 @@
             The time the order was submitted
             </summary>
         </member>
+        <member name="P:Binance.Net.Objects.Shared.BinanceOrderBase.CreateTimeStr">
+            <summary>
+            
+            </summary>
+        </member>
         <member name="P:Binance.Net.Objects.Shared.BinanceOrderBase.UpdateTime">
             <summary>
             The time the order was last updated
+            </summary>
+        </member>
+        <member name="P:Binance.Net.Objects.Shared.BinanceOrderBase.UpdateTimeStr">
+            <summary>
+            
             </summary>
         </member>
         <member name="P:Binance.Net.Objects.Shared.BinanceOrderBase.IsWorking">

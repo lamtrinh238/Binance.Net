@@ -2,7 +2,6 @@
 using Binance.Net.Enums;
 using Binance.Net.Objects.Spot;
 using BinanceAPI.ClientConsole.Helper;
-//using BinanceAPI.ClientConsole.Helper;
 using CryptoExchange.Net.Authentication;
 using CryptoExchange.Net.Logging;
 using Newtonsoft.Json;
@@ -23,45 +22,86 @@ namespace BinanceAPI.ClientConsole
         {
             SettingConfig();
 
-
-
-            var tradeCostAveraging = TradeCostAveraging(symbol: "SOLBTC", limit: 500);
-            LogHelper.WriteFreeLog(tradeCostAveraging);
-
+            // caculate trades
+            string[] symbols =
+                {
+                 "SOLBTC",
+                 "UNIBTC",
+                "TRXBTC",
+                "DGBBTC",
+                "DOGEBTC",
+                "XRPBNB", "XRPBTC", "XRPETH", "XRPUSDT",
+                "ADABNB", "ADABTC", "ADAETH"
+                };
+            DateTime startTime = new DateTime(1970, 1, 1, 0, 0, 0, 0, System.DateTimeKind.Utc).AddSeconds(1619977322);
+            string timeId = DateTime.Now.ToString("yyyyMMddHHmm");
+            List<string> allAvr = new List<string>();
+            foreach (var item in symbols)
+            {
+                var tradeCostAveraging = TradeCostAveraging(symbol: item, limit: 500, startTime: startTime);
+                LogHelper.WriteFreeLog(tradeCostAveraging, $"{timeId}_{item}");
+                allAvr.Add($"{tradeCostAveraging.Summary}");
+            }
+            LogHelper.WriteFreeLog(allAvr, $"{timeId}_AllTradesAverage");
             Console.ReadLine();
             _writer.Close();
         }
 
-        private static object TradeCostAveraging(string symbol, DateTime? startTime = null, DateTime? endTime = null, int? limit = 500)
+        private static TradeCostAveragingModel TradeCostAveraging(string symbol, DateTime? startTime = null, DateTime? endTime = null, int? limit = 500)
         {
-            var trades = _client.Spot.Order.GetAllOrders(symbol: symbol, limit: limit);
+            var trades = _client.Spot.Order.GetAllOrders(symbol: symbol, limit: limit, startTime: startTime);
             if (trades.Success)
             {
-                var tradesFilled = trades.Data.Where(c => c.Status == OrderStatus.Filled);
-                decimal averaging = tradesFilled.Average(a => a.AverageFillPrice).Value;
-                decimal totalQuantityFilled = 0;
-                decimal totalCost = 0;
-                foreach (var item in tradesFilled)
+                var allTrades = trades.Data.OrderByDescending(o=>o.UpdateTime);
+                var tradesFilled = allTrades.Where(c => c.Status == OrderStatus.Filled || c.Status == OrderStatus.PartiallyFilled);
+                decimal totalCostBUY = tradesFilled.Where(c => c.Side == OrderSide.Buy).Sum(ct => ct.QuoteQuantityFilled);
+                decimal totalCostSELL = tradesFilled.Where(c => c.Side == OrderSide.Sell).Sum(ct => ct.QuoteQuantityFilled);
+                decimal totalAmountBUY = tradesFilled.Where(c => c.Side == OrderSide.Buy).Sum(ct => ct.QuantityFilled);
+                decimal totalAmountSELL = tradesFilled.Where(c => c.Side == OrderSide.Sell).Sum(ct => ct.QuantityFilled);
+
+                decimal totalCost = totalCostBUY - totalCostSELL;
+                decimal totalAmount = totalAmountBUY - totalAmountSELL;
+
+                decimal averagingBUY = totalAmountBUY == 0 ? 0 : totalCostBUY / totalAmountBUY;
+                decimal averagingSELL = totalAmountSELL == 0 ? 0 : totalCostSELL / totalAmountSELL;
+
+                decimal averaging = totalAmount == 0 ? 0 : totalCost / totalAmount;
+
+                string summary = $"You have {tradesFilled.Count()} trades {symbol} filled."
+                    + $"--- Buy total [{totalAmount}] by [{totalCost}]."
+                    + $"--- With averging [{averaging}]";
+                return new TradeCostAveragingModel()
                 {
-                    if (item.Status == OrderStatus.Filled)
-                    {
-                        totalQuantityFilled += item.QuantityFilled;
-                        totalCost += item.QuoteQuantityFilled;
-                    }
-                }
-                averaging = totalCost / totalQuantityFilled;
-                string result = $"You have {tradesFilled.Count()} trades ${symbol} filled."
-                    +$"- Total buy: ${totalQuantityFilled}, total cost: ${totalCost}"
-                    +$"------ DETAILS ------";
-                return new 
-                {
-                    Summary = result,
-                    Detail = trades.Data
+                    Summary = summary,
+                    TotalCost = totalCost,
+                    TotalAmount = totalAmount,
+                    Averaging = averaging,
+                    AveragingBUY = averagingBUY,
+                    AveragingSELL = averagingSELL,
+                    TotalCostBUY = totalCostBUY,
+                    TotalCostSELL = totalCostSELL,
+                    TotalAmountBUY = totalAmountBUY,
+                    TotalAmountSELL = totalAmountSELL,
+                    Detail = allTrades
                 };
             }
             return null;
         }
 
+        public class TradeCostAveragingModel
+        {
+            public string Summary { get; set; }
+            public decimal TotalCost { get; set; }
+            public decimal TotalAmount { get; set; }
+            public decimal Averaging { get; set; }
+            public decimal AveragingBUY { get; set; }
+            public decimal AveragingSELL { get; set; }
+            public decimal TotalCostBUY { get; set; }
+            public decimal TotalCostSELL { get; set; }
+            public decimal TotalAmountBUY { get; set; }
+            public decimal TotalAmountSELL { get; set; }
+            public object Detail { get; set; }
+        }
 
         private static void SettingConfig()
         {
@@ -76,13 +116,15 @@ namespace BinanceAPI.ClientConsole
             {
                 ApiCredentials = new ApiCredentials("dlgSlybqJTZ2zCTjf2sT97mWbcTRJbuYa5GtDPue6x3JJsulVt1gmZ3oGttfkQzJ", "Q6fjmKXHMHpVQqYXIrU9fdMVayRTAYcYGVE0x35W9Im3cRhjkIEl3oWYYpkBkaNp"),
                 LogVerbosity = LogVerbosity.Debug,
-                LogWriters = new List<TextWriter> { _writer, Console.Out }
+                LogWriters = new List<TextWriter> {Console.Out }
+                //LogWriters = new List<TextWriter> { _writer, Console.Out }
             });
             BinanceSocketClient.SetDefaultOptions(new BinanceSocketClientOptions()
             {
                 ApiCredentials = new ApiCredentials("dlgSlybqJTZ2zCTjf2sT97mWbcTRJbuYa5GtDPue6x3JJsulVt1gmZ3oGttfkQzJ", "Q6fjmKXHMHpVQqYXIrU9fdMVayRTAYcYGVE0x35W9Im3cRhjkIEl3oWYYpkBkaNp"),
                 LogVerbosity = LogVerbosity.Debug,
-                LogWriters = new List<TextWriter> { _writer, Console.Out }
+                LogWriters = new List<TextWriter> { Console.Out }
+                //LogWriters = new List<TextWriter> { _writer, Console.Out }
             });
 
 

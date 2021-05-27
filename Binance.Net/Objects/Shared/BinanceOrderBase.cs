@@ -114,11 +114,40 @@ namespace Binance.Net.Objects.Shared
         /// </summary>
         [JsonProperty("time"), JsonConverter(typeof(TimestampConverter))]
         public DateTime CreateTime { get; set; }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        public string CreateTimeStr
+        {
+            get
+            {
+                if (CreateTime == null)
+                    return "-";
+
+                return CreateTime.ToLocalTime().ToString("MM/dd/yyyy HH:mm:ss");
+            }
+        }
+
         /// <summary>
         /// The time the order was last updated
         /// </summary>
         [JsonConverter(typeof(TimestampConverter))]
         public DateTime? UpdateTime { get; set; }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        public string UpdateTimeStr {
+            get
+            {
+                if (UpdateTime == null)
+                    return "-";
+
+                return UpdateTime.Value.ToLocalTime().ToString("MM/dd/yyyy HH:mm:ss");
+            }
+        }
+
         /// <summary>
         /// Is working
         /// </summary>
