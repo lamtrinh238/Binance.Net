@@ -33,15 +33,26 @@ namespace BinanceAPI.ClientConsole
                 "XRPBNB", "XRPBTC", "XRPETH", "XRPUSDT",
                 "ADABNB", "ADABTC", "ADAETH"
                 };
-            DateTime startTime = new DateTime(1970, 1, 1, 0, 0, 0, 0, System.DateTimeKind.Utc).AddSeconds(1619977322);
+            Dictionary<string, DateTime> sunbolWatch = new Dictionary<string, DateTime>() 
+            {
+                { "SOLBTC",  new DateTime(2021,01,20)},
+                { "UNIBTC", new DateTime(2021,01,20)},
+                { "TRXBTC",  new DateTime(2021,05,20)},
+                { "DGBBTC",  new DateTime(2021,05,20)},
+                { "DOGEBTC",  new DateTime(2021,01,20)},
+                { "XRPBNB",  new DateTime(2021,05,20)},{ "XRPBTC", new DateTime(2021,05,20)},{ "XRPETH", new DateTime(2021,05,20)},{ "XRPUSDT",new DateTime(2021,05,20)},
+                { "ADABNB", new DateTime(2021,05,20)},{ "ADABTC", new DateTime(2021,05,20)},{ "ADAETH", new DateTime(2021,05,20)}
+            };
             string timeId = DateTime.Now.ToString("yyyyMMddHHmm");
             List<string> allAvr = new List<string>();
-            foreach (var item in symbols)
+
+            foreach (KeyValuePair<string, DateTime> item in sunbolWatch)
             {
-                var tradeCostAveraging = TradeCostAveraging(symbol: item, limit: 500, startTime: startTime);
-                LogHelper.WriteFreeLog(tradeCostAveraging, $"{timeId}_{item}");
+                var tradeCostAveraging = TradeCostAveraging(symbol: item.Key, limit: 500, startTime: item.Value);
+                LogHelper.WriteFreeLog(tradeCostAveraging, $"{timeId}_{item.Key}_{item.Value.ToString("yyMMdd")}");
                 allAvr.Add($"{tradeCostAveraging.Summary}");
             }
+
             LogHelper.WriteFreeLog(allAvr, $"{timeId}_AllTradesAverage");
             Console.ReadLine();
             _writer.Close();
@@ -67,9 +78,10 @@ namespace BinanceAPI.ClientConsole
 
                 decimal averaging = totalAmount == 0 ? 0 : totalCost / totalAmount;
 
-                string summary = $"You have {tradesFilled.Count()} trades {symbol} filled."
-                    + $"--- Buy total [{totalAmount}] by [{totalCost}]."
-                    + $"--- With averging [{averaging}]";
+                string summary = $"You have {tradesFilled.Count()} trades {symbol} filled" +
+                    $" from {startTime.Value.ToString("MM/dd/yyyy HH:mm:ss")} to {DateTime.Now.ToString("MM/dd/yyyy HH:mm:ss")}" +
+                    $"--- Buy total [{totalAmount}] by [{totalCost}]." +
+                    $"--- With averging [{averaging}]";
                 return new TradeCostAveragingModel()
                 {
                     Summary = summary,
