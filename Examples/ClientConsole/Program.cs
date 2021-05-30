@@ -23,16 +23,6 @@ namespace BinanceAPI.ClientConsole
             SettingConfig();
 
             // caculate trades
-            string[] symbols =
-                {
-                 "SOLBTC",
-                 "UNIBTC",
-                "TRXBTC",
-                "DGBBTC",
-                "DOGEBTC",
-                "XRPBNB", "XRPBTC", "XRPETH", "XRPUSDT",
-                "ADABNB", "ADABTC", "ADAETH"
-                };
             Dictionary<string, DateTime> sunbolWatch = new Dictionary<string, DateTime>() 
             {
                 { "SOLBTC",  new DateTime(2021,01,20)},
@@ -40,8 +30,8 @@ namespace BinanceAPI.ClientConsole
                 { "TRXBTC",  new DateTime(2021,05,20)},
                 { "DGBBTC",  new DateTime(2021,05,20)},
                 { "DOGEBTC",  new DateTime(2021,01,20)},
-                { "XRPBNB",  new DateTime(2021,05,20)},{ "XRPBTC", new DateTime(2021,05,20)},{ "XRPETH", new DateTime(2021,05,20)},{ "XRPUSDT",new DateTime(2021,05,20)},
-                { "ADABNB", new DateTime(2021,05,20)},{ "ADABTC", new DateTime(2021,05,20)},{ "ADAETH", new DateTime(2021,05,20)}
+                { "XRPBNB",  new DateTime(2021,01,01)},{ "XRPBTC", new DateTime(2021,01,01)},{ "XRPETH", new DateTime(2021,01,01)},{ "XRPUSDT",new DateTime(2019,01,01)},
+                { "ADABNB", new DateTime(2021,01,01)},{ "ADABTC", new DateTime(2021,01,01)},{ "ADAETH", new DateTime(2021,01,01)}
             };
             string timeId = DateTime.Now.ToString("yyyyMMddHHmm");
             List<string> allAvr = new List<string>();
